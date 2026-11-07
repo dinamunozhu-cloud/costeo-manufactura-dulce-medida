@@ -2,7 +2,7 @@
 
 Primera versión de una experiencia de manufactura para el módulo de inventario de una solución de gestión para pymes (escenario SYNTHEX). Permite que una pyme que compra materia prima y la transforma pase su producción del Excel al sistema y conozca el costo real de lo que fabrica: **MP + MOD + CIF**.
 
-**Demo:** _(enlace de Vercel)_ · **Autora:** Dina Luz Muñoz Huaitoto · Construido con Claude; la función inteligente del demo usa Gemini.
+**Demo:** https://costeo-manufactura-dulce-medida.vercel.app · **Autora:** Dina Luz Muñoz Huaitoto · Construido con Claude; la función inteligente del demo usa Gemini.
 
 ---
 

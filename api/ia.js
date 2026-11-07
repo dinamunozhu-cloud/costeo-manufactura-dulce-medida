@@ -2,7 +2,9 @@
 // en una ficha técnica estructurada, usando Gemini.
 // Requiere la variable de entorno GEMINI_API_KEY (y opcionalmente GEMINI_MODEL).
 
-const MODELO = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const MODELO = process.env.GEMINI_MODEL || 'gemini-flash-latest';
+const RESPALDO = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest', 'gemini-2.5-flash-lite'];
+const esperar = ms => new Promise(r => setTimeout(r, ms));
 
 const esquema = {
   type: 'OBJECT',
@@ -86,26 +88,44 @@ export default async function handler(req, res) {
       res.status(400).json({ error: 'Describe la receta con un poco más de detalle.' });
       return;
     }
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODELO}:generateContent`;
-    const r = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: instrucciones(texto, inventario, roles) }] }],
-        generationConfig: {
-          temperature: 0.1,
-          responseMimeType: 'application/json',
-          responseSchema: esquema,
-        },
-      }),
+    const peticion = JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: instrucciones(texto, inventario, roles) }] }],
+      generationConfig: {
+        temperature: 0.1,
+        responseMimeType: 'application/json',
+        responseSchema: esquema,
+      },
     });
-    const data = await r.json();
-    if (!r.ok) {
-      res.status(502).json({ error: data?.error?.message || 'La IA no respondió correctamente.' });
-      return;
+    // Si el modelo principal está saturado (503/429) o no existe (404), se reintenta
+    // y luego se prueba con modelos de respaldo.
+    const modelos = [...new Set([MODELO, ...RESPALDO])];
+    let ultimoError = 'La IA no respondió correctamente.';
+    for (const modelo of modelos) {
+      for (let intento = 0; intento < 2; intento++) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`;
+        const r = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+          body: peticion,
+        });
+        const data = await r.json().catch(() => ({}));
+        if (r.ok) {
+          const salida = data?.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || '';
+          res.status(200).json({ ficha: JSON.parse(salida), modelo });
+          return;
+        }
+        ultimoError = data?.error?.message || ultimoError;
+        if (r.status === 503 || r.status === 429) {
+          ultimoError = 'El servicio de IA está con alta demanda en este momento. Intenta de nuevo en unos segundos.';
+          if (intento === 0) { await esperar(1500); continue; }
+          break; // pasa al siguiente modelo
+        }
+        if (r.status === 404) break; // modelo no disponible: siguiente
+        res.status(502).json({ error: ultimoError });
+        return;
+      }
     }
-    const salida = data?.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || '';
-    res.status(200).json({ ficha: JSON.parse(salida), modelo: MODELO });
+    res.status(503).json({ error: ultimoError });
   } catch (e) {
     res.status(500).json({ error: 'No se pudo interpretar la respuesta de la IA: ' + e.message });
   }

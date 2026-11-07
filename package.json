@@ -1,0 +1,8 @@
+{
+  "name": "costeo-manufactura-dulce-medida",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Demo: primera experiencia de manufactura integrada al inventario, con costeo MP + MOD + CIF e IA.",
+  "engines": { "node": ">=18" }
+}

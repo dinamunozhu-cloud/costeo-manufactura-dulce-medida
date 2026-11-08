@@ -5,6 +5,8 @@
 const MODELO = process.env.GEMINI_MODEL || 'gemini-flash-latest';
 const RESPALDO = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest', 'gemini-2.5-flash-lite'];
 const esperar = ms => new Promise(r => setTimeout(r, ms));
+const LIMITE_INTENTO_MS = Number(process.env.IA_LIMITE_MS) || 25000; // tiempo máximo por llamada a Gemini
+const LIMITE_TOTAL_MS = 50000;   // tiempo máximo de toda la función
 
 const esquema = {
   type: 'OBJECT',
@@ -59,7 +61,7 @@ Reglas:
 - Expresa el tiempo de cada rol en MINUTOS POR UNIDAD de producto. Si el usuario da horas por lote, divide entre el rendimiento.
 - Asocia cada tiempo al id del rol existente que corresponda; si no corresponde a ninguno, usa rolId null.
 - No inventes insumos, cantidades ni tiempos que el usuario no mencionó. Si falta un dato necesario (por ejemplo el peso o el rendimiento), haz una estimación razonable y escríbela en "supuestos".
-- Responde en español.
+- Responde en español. Redacta los supuestos en lenguaje de negocio para el usuario, sin mencionar campos técnicos (como itemId, rolId o null).
 
 Inventario existente (id | nombre | unidad de inventario):
 ${inventario.map(i => `${i.id} | ${i.nombre} | ${i.unidad}`).join('\n')}
@@ -100,14 +102,29 @@ export default async function handler(req, res) {
     // y luego se prueba con modelos de respaldo.
     const modelos = [...new Set([MODELO, ...RESPALDO])];
     let ultimoError = 'La IA no respondió correctamente.';
+    const inicio = Date.now();
     for (const modelo of modelos) {
       for (let intento = 0; intento < 2; intento++) {
+        const restante = LIMITE_TOTAL_MS - (Date.now() - inicio);
+        if (restante < 3000) break;
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`;
-        const r = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-          body: peticion,
-        });
+        let r;
+        const control = new AbortController();
+        const reloj = setTimeout(() => control.abort(), Math.min(LIMITE_INTENTO_MS, restante));
+        try {
+          r = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+            body: peticion,
+            signal: control.signal,
+          });
+        } catch (e) {
+          // La IA tardó demasiado: se pasa al siguiente modelo.
+          ultimoError = 'La IA tardó demasiado en responder. Intenta de nuevo en unos segundos.';
+          break;
+        } finally {
+          clearTimeout(reloj);
+        }
         const data = await r.json().catch(() => ({}));
         if (r.ok) {
           const salida = data?.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || '';

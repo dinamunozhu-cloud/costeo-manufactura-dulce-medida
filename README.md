@@ -93,6 +93,10 @@ El usuario revisa y corrige antes de guardar: **la IA propone, la persona decide
 
 **Construcción:** el demo se diseñó y construyó con Claude (diseño de producto, cálculos y código). Se eligió Gemini para la función dentro del demo por su nivel gratuito de API.
 
+**Elección del modelo, con datos:** se probó primero el modelo más reciente (gemini-3.8-flash): en tres pruebas tardó entre 30 y 53 segundos y falló dos veces por alta demanda. Con gemini-2.5-flash y el razonamiento reducido, tres pruebas tardaron 12, 11 y 18 segundos (promedio 13,7 s) sin errores y con la misma interpretación. Criterio: 15 segundos o menos en promedio. Para la tarea (convertir unidades y asociar insumos) no se necesita el modelo más potente.
+
+**Contingencia:** cada llamada tiene un tiempo máximo de espera; si el modelo está saturado o no responde, el sistema reintenta y pasa a un modelo de respaldo, con mensajes de error en español.
+
 ## 8. Recorrido sugerido del demo
 1. **Configuración de costos:** tarifas de MOD por rol y de CIF por kilo, con su cálculo.
 2. **Ficha de la mermelada:** insumos, tiempos, sustitutos y costo estándar.
@@ -106,4 +110,4 @@ El usuario revisa y corrige antes de guardar: **la IA propone, la persona decide
 - `js/data.js`: datos semilla del caso.
 - `js/app.js`: interfaz y navegación.
 
-**Despliegue en Vercel:** importar el repositorio y agregar la variable de entorno `GEMINI_API_KEY` (opcional: `GEMINI_MODEL`, por defecto `gemini-2.5-flash`).
+**Despliegue en Vercel:** importar el repositorio y agregar la variable de entorno `GEMINI_API_KEY` y `GEMINI_MODEL` (en el demo: `gemini-2.5-flash`; si no se define, se usa `gemini-flash-latest`).

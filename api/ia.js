@@ -90,12 +90,18 @@ export default async function handler(req, res) {
       res.status(400).json({ error: 'Describe la receta con un poco más de detalle.' });
       return;
     }
-    const peticion = JSON.stringify({
+    // Razonamiento ("thinking") reducido: la tarea es de conversión y asociación,
+    // no requiere razonamiento largo, y así la respuesta llega en segundos.
+    const pensamiento = modelo => modelo.includes('2.5')
+      ? { thinkingBudget: 0 }
+      : { thinkingLevel: 'low' };
+    const peticion = (modelo, conPensamiento) => JSON.stringify({
       contents: [{ role: 'user', parts: [{ text: instrucciones(texto, inventario, roles) }] }],
       generationConfig: {
         temperature: 0.1,
         responseMimeType: 'application/json',
         responseSchema: esquema,
+        ...(conPensamiento ? { thinkingConfig: pensamiento(modelo) } : {}),
       },
     });
     // Si el modelo principal está saturado (503/429) o no existe (404), se reintenta
@@ -104,7 +110,8 @@ export default async function handler(req, res) {
     let ultimoError = 'La IA no respondió correctamente.';
     const inicio = Date.now();
     for (const modelo of modelos) {
-      for (let intento = 0; intento < 2; intento++) {
+      let conPensamiento = true;
+      for (let intento = 0; intento < 3; intento++) {
         const restante = LIMITE_TOTAL_MS - (Date.now() - inicio);
         if (restante < 3000) break;
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`;
@@ -115,7 +122,7 @@ export default async function handler(req, res) {
           r = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-            body: peticion,
+            body: peticion(modelo, conPensamiento),
             signal: control.signal,
           });
         } catch (e) {
@@ -132,9 +139,14 @@ export default async function handler(req, res) {
           return;
         }
         ultimoError = data?.error?.message || ultimoError;
+        // Si el modelo no acepta la configuración de razonamiento, se repite sin ella.
+        if (r.status === 400 && conPensamiento && /think/i.test(ultimoError)) {
+          conPensamiento = false;
+          continue;
+        }
         if (r.status === 503 || r.status === 429) {
           ultimoError = 'El servicio de IA está con alta demanda en este momento. Intenta de nuevo en unos segundos.';
-          if (intento === 0) { await esperar(1500); continue; }
+          if (intento < 2) { await esperar(1500); continue; }
           break; // pasa al siguiente modelo
         }
         if (r.status === 404) break; // modelo no disponible: siguiente

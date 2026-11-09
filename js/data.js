@@ -117,7 +117,7 @@ export function datosIniciales() {
       capacidad: 8800,
       gastos: [
         { nombre: 'Salarios del personal de planta (supervisor, calidad, mantenimiento, aseo)', valor: 24800000, tipo: 'Fijo' },
-        { nombre: 'Arriendo de la bodega', valor: 15000000, tipo: 'Fijo' },
+        { nombre: 'Arriendo del área de producción (sin oficinas)', valor: 15000000, tipo: 'Fijo' },
         { nombre: 'Mantenimiento de maquinaria', valor: 8000000, tipo: 'Fijo' },
         { nombre: 'Energía', valor: 4500000, tipo: 'Variable' },
         { nombre: 'Depreciación de maquinaria', valor: 4000000, tipo: 'Fijo' },

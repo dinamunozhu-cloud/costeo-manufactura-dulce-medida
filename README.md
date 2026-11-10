@@ -29,7 +29,9 @@ Regla de decisión: entra en la fase 1 todo lo que la pyme necesita para **pasar
 | Contabilidad | Asientos de consumo, aplicación de MOD y CIF, y cierre, con cuentas del PUC configurables. |
 | IA | Crear la ficha técnica desde una descripción en lenguaje natural. |
 
-**Qué queda para la fase 2** (porque agrega complejidad y primero hay que validar la base): lotes y vencimientos para trazabilidad (primera prioridad en alimentos), variación de precio de MP y variación de volumen de CIF, otros métodos de asignación de CIF, tarifa de MOD por persona o centro de trabajo, inventario comprometido entre órdenes, historial de versiones de la ficha, fichas de varios niveles, flujo de aprobación de sustitutos por calidad con ajuste de la etiqueta nutricional, cálculo automático de la eficiencia real y permisos por usuario.
+**Lo que el módulo hereda de la plataforma:** base de datos, inicio de sesión, gestión de usuarios y multiempresa (*multitenant*). El módulo vive dentro del sistema de inventario existente. Su diseño ya es estándar: Dulce Medida es solo el caso de ejemplo y cada empresa parametriza sus gastos, roles, cuentas contables y fichas.
+
+**Qué queda para la fase 2** (porque agrega complejidad y primero hay que validar la base): informes de variaciones del mes consolidados por producto, insumo y rol; tablero de indicadores con alertas (margen real frente al objetivo, eficiencia real de MOD, merma por producto y absorción del CIF); permisos por rol (quién parametriza costos, quién crea órdenes, quién aprueba sustitutos); merma estándar en la ficha; lotes y vencimientos para trazabilidad (primera prioridad en alimentos), variación de precio de MP y variación de volumen de CIF, otros métodos de asignación de CIF, tarifa de MOD por persona o centro de trabajo, inventario comprometido entre órdenes, historial de versiones de la ficha, fichas de varios niveles, flujo de aprobación de sustitutos por calidad con ajuste de la etiqueta nutricional, y cálculo automático de la eficiencia real.
 
 ## 3. Decisiones de costeo
 
